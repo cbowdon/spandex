@@ -384,7 +384,17 @@
               ;; it's an error and we must exit the consuming process
               (if (or (instance? Exception response)
                       (not= 200 (:status response)))
-                (async/>! ch response)
+                (do
+                  (try
+                    ;; Must clear scrolls on error
+                    (request client
+                             {:method :delete
+                              :url "/_search/scroll"
+                              :body {:scroll_id scroll-id}})
+                    (catch Throwable _
+                      ;; TODO what do we do when clearing the scroll fails?
+                      ))
+                  (async/>! ch response))
                 ;; we need to make sure the user didn't close the
                 ;; returned chan for scroll interuption and that we
                 ;; actually have more results to feed
